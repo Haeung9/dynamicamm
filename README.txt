@@ -1,5 +1,5 @@
-AMM
-repository: github.com/
+Dynamic AMM
+repository: https://github.com/Haeung9/dynamicamm
 
 1. Install
 $ pip install -r requirements.txt
@@ -9,3 +9,5 @@ $ py -m unittest -v
 
 3. Run 
 $ py main.py
+
+Reference: https://arxiv.org/abs/2101.02778
