@@ -1,5 +1,6 @@
 Dynamic AMM
 repository: https://github.com/Haeung9/dynamicamm
+Email: haeung@gist.ac.kr
 
 1. Install
 $ pip install -r requirements.txt

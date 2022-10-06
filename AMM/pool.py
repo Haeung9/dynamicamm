@@ -38,7 +38,7 @@ class Pool: # abstract
 
     def swap(self, inputAssetId, inputAmount): # Always use try-except for swap method. 
         if inputAmount < 0:
-            raise Exception("Wrong input amount.") 
+            raise Exception("Wrong input amount") 
         effectiveInputAmount = inputAmount*(1-self.feeRate) # effective inputAmount that used for swap, except fee
         outputAmount = self.calculateOutputAmount(inputAssetId, effectiveInputAmount)
         if outputAmount > self.reserves[(inputAssetId+1)%2]:
@@ -113,7 +113,7 @@ class CPMMPool(Pool):
     def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
         if inputAmount < 0:
             print(inputAmount)
-            raise Exception("Wrong input amount.") 
+            raise Exception("Wrong input amount") 
         outputAmount = (self.reserves[(inputAssetId+1)%2]*inputAmount)/(self.reserves[inputAssetId] + inputAmount)
         # outputAmount = (outputReserve*inputAmount)/(inputReserve + inputAmount)
         return outputAmount
@@ -167,7 +167,7 @@ class DCPMMPool(Pool):
     def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
         if inputAmount < 0:
             print(inputAmount)
-            raise Exception("Wrong input amount.") 
+            raise Exception("Wrong input amount") 
         reserve0 = self.getReserve0()
         reserve1 = self.getReserve1()
         parameterA = self.calculateParameterA()
@@ -226,7 +226,7 @@ class DCSMMPool(Pool):
     def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
         if inputAmount < 0:
             print(inputAmount)
-            raise Exception("Wrong input amount.") 
+            raise Exception("Wrong input amount") 
         price0 = self.calculatePrice(0)
         if inputAssetId == 0:
             outputAmount = inputAmount * price0
@@ -285,7 +285,7 @@ class WCSMMPool(Pool): # CSMM pool with weight. The price ratio can differ from 
         
     def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
         if inputAmount < 0:
-            raise Exception("Wrong input amount.") 
+            raise Exception("Wrong input amount") 
         price = self.calculatePrice(inputAssetId)
         outputAmount = inputAmount * price
         return outputAmount

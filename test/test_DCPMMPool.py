@@ -38,6 +38,19 @@ class DCPMMPoolTest(unittest.TestCase):
         reserve1 = apool.getReserve1()
         self.assertEqual(reserve0, 100-(500/110))
         self.assertEqual(reserve1, 110)
+
+        # test case 4: Wrong input amount
+        apool = pool.DCPMMPool(reserve0=100.0, reserve1=100.0, feeRate=0.0)
+        with self.assertRaisesRegex(Exception, "Wrong input amount"):
+            apool.swap(0, -10.0)
+        reserve0 = apool.getReserve0()
+        reserve1 = apool.getReserve1()
+        self.assertEqual(reserve0, 100.0)
+        self.assertEqual(reserve1, 100.0)
+    
+    def test_toLargeSwap(self):
+        apool = pool.DCPMMPool(reserve0=100.0, reserve1=100.0, feeRate=0.0)
+        apool.swap(0,99999999999999999999999999999999999999999999.0) # never raise
     
     def test_swapWithFee_feeOutOfPool(self):
         # test case 1: balanced swap
