@@ -3,11 +3,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 def loadData(nameSeparators, datadirpath):
-    resultdirpath = []
     result = []
     for i in range(len(nameSeparators)):
-        resultdirpath.append(os.path.join(datadirpath, nameSeparators[i]))
-        fileName = os.path.join(resultdirpath[i], "result.csv")
+        resultdirpath = os.path.join(datadirpath, nameSeparators[i])
+        fileName = os.path.join(resultdirpath, "result.csv")
         result.append(pd.read_csv(fileName, sep="\t"))
     return result
 

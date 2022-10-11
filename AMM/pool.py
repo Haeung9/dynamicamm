@@ -37,6 +37,8 @@ class Pool: # abstract
         pass # must return required reserve of assetId, in order to poolPrice reaches to targetPrice0
 
     def swap(self, inputAssetId, inputAmount): # Always use try-except for swap method. 
+        if ((inputAssetId != 0) & (inputAssetId != 1)):
+            raise Exception("Wrong asset id")
         if inputAmount < 0:
             raise Exception("Wrong input amount") 
         effectiveInputAmount = inputAmount*(1-self.feeRate) # effective inputAmount that used for swap, except fee
@@ -66,8 +68,7 @@ class Pool: # abstract
         targetInputReserve = self.calculateReserveForTargetPrice0(marketPrice0, inputAssetId)
         spentAmount = targetInputReserve - currentInputReserve
         arbitrageOutputAmount = self.calculateOutputAmount(inputAssetId, spentAmount)
-        earnedAmount = arbitrageOutputAmount / marketPrice
-        profitAmount = earnedAmount - spentAmount
+        profitAmount = (arbitrageOutputAmount / marketPrice) - spentAmount
         return [spentAmount, profitAmount, inputAssetId]
     
     def arbitrageAsMuchAsPossible(self, maximumAmount0, maximumAmount1):
@@ -91,13 +92,11 @@ class Pool: # abstract
     Let x == asset0, y == asset1
     1. curve:
         x * y = K
-
     2. dx -- dy relationship:
         x * y = (x + dx) * (y + dy)
         x*dy + y*dx + dx*dy = 0
         dy = - y * dx / (x + dx)
         dx = - x * dy / (y + dy)
-
     3. instantaneous price (negative derivative of curve):
         y = K / x
         derivative = - K / (x^2)
@@ -133,14 +132,12 @@ class CPMMPool(Pool):
     Let x == asset0, y == asset1
     1. curve:
         W * (x - A) * y = K
-
     2. dx -- dy relationship:
         W * (x - A) * y = W * (x + dx - A) * (y + dy)
         W * (x + dx - A) * dy + W * y * dx = 0
         (x + dx - A) * dy + y * dx = 0
         dy = - y * dx / (x + dx - A)
         dx = - (x - A) * dy / (y + dy)
-
     3. instantaneous price (negative derivative of curve):
         y = (K / W) * ( 1/(x- A) )
         derivative = -1 * (K / W) * ( 1/(x - A)^2 )
@@ -161,7 +158,7 @@ class DCPMMPool(Pool):
             price = self.getMarketPrice0()
             price = 1/price # TODO: except divid by zero
         else:
-            raise Exception("Wrong asset ID")
+            raise Exception("Wrong asset id")
         return price
     
     def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
@@ -177,7 +174,7 @@ class DCPMMPool(Pool):
         elif inputAssetId == 1:
             outputAmount = (reserve0 - parameterA) * inputAmount / (reserve1 + inputAmount)
         else:
-            raise Exception("Wrong asset ID")
+            raise Exception("Wrong asset id")
         return outputAmount
 
     def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # overload super
@@ -196,13 +193,11 @@ class DCPMMPool(Pool):
     Let x == asset0, y == asset1
     1. curve:
         price0 * x + y = K
-
     2. dx -- dy relationship:
         price0 * x + y = price0 * (x + dx) + y + dy
         price0 * dx + dy = 0
         dy = - price0 * dx
         dx = - dy / price0
-
     3. instantaneous price (negative derivative of curve):
         = price0
 """
@@ -220,7 +215,7 @@ class DCSMMPool(Pool):
             price = self.getMarketPrice0()
             price = 1/price # TODO: except divid by zero
         else:
-            raise Exception("Wrong asset ID")
+            raise Exception("Wrong asset id")
         return price
 
     def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
@@ -233,7 +228,7 @@ class DCSMMPool(Pool):
         elif inputAssetId == 1:
             outputAmount = inputAmount / price0
         else:
-            raise Exception("Wrong asset ID")
+            raise Exception("Wrong asset id")
         return outputAmount
     
     def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # overload super
@@ -252,13 +247,11 @@ class DCSMMPool(Pool):
     Let x == asset0, y == asset1
     1. curve:
         price0 * x + y = K
-
     2. dx -- dy relationship:
         price0 * x + y = price0 * (x + dx) + y + dy
         price0 * dx + dy = 0
         dy = - price0 * dx
         dx = - dy / price0
-
     3. instantaneous price (negative derivative of curve):
         = price0
 """
@@ -281,7 +274,7 @@ class WCSMMPool(Pool): # CSMM pool with weight. The price ratio can differ from 
         elif assetId == 1:
             return 1/self.__initialPrice0
         else:
-            raise Exception("Wrong input asset id")
+            raise Exception("Wrong asset id")
         
     def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
         if inputAmount < 0:
