@@ -12,6 +12,8 @@ class Pool: # abstract
     def getReserve1(self):
         return self.reserves[1]
     def getReserve(self, assetId):
+        if ((assetId != 0) & (assetId != 1)):
+            raise Exception("Wrong asset id")
         return self.reserves[assetId]
     def getFeeReserve0(self):
         return self.fees[0]
@@ -107,9 +109,13 @@ class CPMMPool(Pool):
         return self.reserves[0]*self.reserves[1]
 
     def calculatePrice(self, assetId): # overload super
+        if ((assetId != 0) & (assetId != 1)):
+            raise Exception("Wrong asset id")
         return self.reserves[(assetId+1)%2]/self.reserves[assetId]
 
     def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
+        if ((inputAssetId != 0) & (inputAssetId != 1)):
+            raise Exception("Wrong asset id")
         if inputAmount < 0:
             print(inputAmount)
             raise Exception("Wrong input amount") 
@@ -232,6 +238,8 @@ class DCSMMPool(Pool):
         return outputAmount
     
     def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # overload super
+        if ((assetId != 0) & (assetId != 1)):
+            raise Exception("Wrong asset id")
         price0 = self.calculatePrice(0)
         parameterK = self.calculateParameterK()
         if price0 == targetPrice0:
@@ -277,6 +285,8 @@ class WCSMMPool(Pool): # CSMM pool with weight. The price ratio can differ from 
             raise Exception("Wrong asset id")
         
     def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
+        if ((inputAssetId != 0) & (inputAssetId != 1)):
+            raise Exception("Wrong asset id")
         if inputAmount < 0:
             raise Exception("Wrong input amount") 
         price = self.calculatePrice(inputAssetId)
@@ -284,6 +294,8 @@ class WCSMMPool(Pool): # CSMM pool with weight. The price ratio can differ from 
         return outputAmount
     
     def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # overload super
+        if ((assetId != 0) & (assetId != 1)):
+            raise Exception("Wrong asset id")
         price0 = self.calculatePrice(0)
         parameterK = self.calculateParameterK()
         if price0 == targetPrice0:
