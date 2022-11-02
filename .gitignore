@@ -2,3 +2,10 @@ __pycache__
 *.egg-info
 data/
 dist/
+
+# venv
+Scripts/
+Include/
+Lib/
+share/
+pyvenv.cfg

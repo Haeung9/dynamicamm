@@ -33,7 +33,7 @@ def runSimulation(Pool: pool.Pool, Traders: agent.Agent, Arbitrageurs: agent.Age
         Arbitrageurs.trade((inputArbAssetId+1)%2, outputArbAmount, inputArbAmount)
     return [snapshotPool, snapshotTraders, snapshotArbitrageurs]
 
-def main(simulationScenarios: List[str]):
+def main(simulationScenarios: List[str], rootpath = os.getcwd()):
     # Parameter Setting
     TradersBudget0 = 10000.0
     TradersBudget1 = 10000.0
@@ -45,8 +45,8 @@ def main(simulationScenarios: List[str]):
     marketPriceTrend = [(i+1)/10 for i in range(numberOfTimePoints)]
     seed = round(time.time())
     # File Setup
-    utils.directoryMaker("")
-    datadirpath = os.path.join(os.getcwd(), "data")
+    utils.directoryMaker("", rootpath)
+    datadirpath = os.path.join(rootpath, "data")
     fileSeed = open(os.path.join(datadirpath, "randomSeed.txt"), mode="w")
     fileSeed.write(str(seed))
     fileSeed.close()
