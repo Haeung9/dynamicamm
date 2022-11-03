@@ -1,19 +1,21 @@
 from . import pool
 from . import agent
 from . import utils
+from . import scenario
 import numpy
 import time
 import copy
 import os
 from typing import List
-
-def runSimulation(Pool: pool.Pool, Traders: agent.Agent, Arbitrageurs: agent.Agent, marketPriceTrend, rng):
+        
+def runSimulation(Pool: pool.Pool, Traders: agent.Agent, Arbitrageurs: agent.Agent, simulationScenario: scenario.Scenario, rng):
     snapshotTraders = []
     snapshotArbitrageurs = []
     snapshotPool = []
+    marketPriceTrend = simulationScenario.price
+    marketPricePrediction = simulationScenario.pricePrediction if simulationScenario.priceType == "prediction" else simulationScenario.price
     for i in range(len(marketPriceTrend)):
-        Pool.setMarketPrice0(marketPriceTrend[i])
-
+        Pool.setMarketPrice0(marketPricePrediction[i])
         snapshotTraders.append(copy.deepcopy(Traders))
         snapshotArbitrageurs.append(copy.deepcopy(Arbitrageurs))
         snapshotPool.append(copy.deepcopy(Pool))
@@ -29,21 +31,13 @@ def runSimulation(Pool: pool.Pool, Traders: agent.Agent, Arbitrageurs: agent.Age
                 tradeAmount = 0.0
             Traders.trade((tradeAssetId+1)%2, tradeOutputAmount, tradeAmount)
 
-        [inputArbAssetId, inputArbAmount, outputArbAmount] = Pool.arbitrageAsMuchAsPossible(Arbitrageurs.balances[0], Arbitrageurs.balances[1])
+        [inputArbAssetId, inputArbAmount, outputArbAmount] = Pool.arbitrageAsMuchAsPossible(Arbitrageurs.balances[0], Arbitrageurs.balances[1], marketPriceTrend[i])
         Arbitrageurs.trade((inputArbAssetId+1)%2, outputArbAmount, inputArbAmount)
     return [snapshotPool, snapshotTraders, snapshotArbitrageurs]
 
-def main(simulationScenarios: List[str], rootpath = os.getcwd()):
+def main(simulationScenarios: List[scenario.Scenario], rootpath = os.getcwd(), randomSeed = round(time.time())):
     # Parameter Setting
-    TradersBudget0 = 10000.0
-    TradersBudget1 = 10000.0
-    ArbitrageursBudget0 = 10000.0
-    ArbitrageursBudget1 = 10000.0
-    PoolBudget0 = 10000.0
-    PoolBudget1 = 10000.0
-    numberOfTimePoints = 100
-    marketPriceTrend = [(i+1)/10 for i in range(numberOfTimePoints)]
-    seed = round(time.time())
+    seed = randomSeed
     # File Setup
     utils.directoryMaker("", rootpath)
     datadirpath = os.path.join(rootpath, "data")
@@ -54,22 +48,39 @@ def main(simulationScenarios: List[str], rootpath = os.getcwd()):
     for i in range(len(simulationScenarios)):
         # Initialize
         rng = numpy.random.default_rng(seed)
-        dirpath = utils.directoryMaker(simulationScenarios[i])
-        Traders = agent.Agent(TradersBudget0, TradersBudget1)
-        Arbitrageurs = agent.Agent(ArbitrageursBudget0, ArbitrageursBudget1)
-        if simulationScenarios[i] == "CPMM":
-            Pool = pool.CPMMPool(PoolBudget0, PoolBudget1, feeInPool=True)
-        elif simulationScenarios[i] == "CSMM":
-            Pool = pool.WCSMMPool(PoolBudget0, PoolBudget1, feeInPool=True)
-        elif simulationScenarios[i] == "DCPMM":
-            Pool = pool.DCPMMPool(PoolBudget0, PoolBudget1, feeInPool=True)
-        elif simulationScenarios[i] == "DCSMM":
-            Pool = pool.DCSMMPool(PoolBudget0, PoolBudget1, feeInPool=True)
+        dirName = simulationScenarios[i].getName()
+        dirpath = utils.directoryMaker(dirName)
+        Traders = agent.Agent(simulationScenarios[i].tradersBudget0, simulationScenarios[i].tradersBudget1)
+        Arbitrageurs = agent.Agent(simulationScenarios[i].arbitrageursBudget0, simulationScenarios[i].arbitrageursBudget1)
+        poolBudget0 = simulationScenarios[i].poolBudget0
+        poolBudget1 = simulationScenarios[i].poolBudget1
+        feeInPool = simulationScenarios[i].feeInPool
+        if simulationScenarios[i].curve == "CPMM":
+            Pool = pool.CPMMPool(poolBudget0, poolBudget1, feeInPool=feeInPool)
+        elif simulationScenarios[i].curve == "CSMM":
+            Pool = pool.WCSMMPool(poolBudget0, poolBudget1, feeInPool=feeInPool)
+        elif simulationScenarios[i].curve == "DCPMM":
+            Pool = pool.DCPMMPool(poolBudget0, poolBudget1, feeInPool=feeInPool)
+        elif simulationScenarios[i].curve == "DCSMM":
+            Pool = pool.DCSMMPool(poolBudget0, poolBudget1, feeInPool=feeInPool)
         else:
-            raise Exception("Wrong simulation scenario name")
-    
+            raise Exception("Wrong simulation scenario curve")
+        
+        if not simulationScenarios[i].price:
+            numberOfTimePoints = 100
+            simulationScenarios[i].price = [(i+1)/10 for i in range(numberOfTimePoints)]
+        else:
+            numberOfTimePoints = len(simulationScenarios[i].price)
+
+        if simulationScenarios[i].priceType == "real":
+            simulationScenarios[i].pricePrediction = simulationScenarios[i].price
+        elif simulationScenarios[i].priceType == "prediction":
+            pass
+        else:
+            raise Exception("Wrong simulation scenario priceType")
+
         # sim
-        [snapshotPool, snapshotTraders, snapshotArbitrageurs] = runSimulation(Pool, Traders, Arbitrageurs, marketPriceTrend, rng)
-        utils.resultFileWriter(snapshotPool, snapshotTraders, snapshotArbitrageurs, marketPriceTrend, dirpath)
+        [snapshotPool, snapshotTraders, snapshotArbitrageurs] = runSimulation(Pool, Traders, Arbitrageurs, simulationScenarios[i], rng)
+        utils.resultFileWriter(snapshotPool, snapshotTraders, snapshotArbitrageurs, simulationScenarios[i], dirpath)
 
 

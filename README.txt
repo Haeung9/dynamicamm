@@ -11,4 +11,7 @@ $ py -m unittest -v
 3. Run 
 $ py main.py
 
+4. Run analysis mode
+$ py -m AMM.analysis
+
 Reference: https://arxiv.org/abs/2101.02778

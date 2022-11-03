@@ -1,8 +1,10 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from . import scenario
+from typing import List, Dict
 
-def loadData(nameSeparators, datadirpath):
+def loadData(nameSeparators: List[str], datadirpath):
     result = []
     for i in range(len(nameSeparators)):
         resultdirpath = os.path.join(datadirpath, nameSeparators[i])
@@ -10,8 +12,12 @@ def loadData(nameSeparators, datadirpath):
         result.append(pd.read_csv(fileName, sep="\t"))
     return result
 
-def main(datadirpath, simulationScenarios):
-    nameSeparators = simulationScenarios
+def main(datadirpath, simulationScenarios: List[scenario.Scenario]):
+    nameSeparators = []
+    for i in range(len(simulationScenarios)):
+        nameSeparators.append(simulationScenarios[i].getName())
+    print("Simulation Scenarios:")
+    print(nameSeparators)
     try:
         result = loadData(nameSeparators, datadirpath)
     except:
@@ -49,12 +55,40 @@ def main(datadirpath, simulationScenarios):
         plt.plot(xasis, result[i]["PoolReserve1"], 
         xasis, result[i]["TradersReserve1"], 
         xasis, result[i]["ArbitrageursReserve1"],"-r")
-        plt.legend(["Pool", "Traders", "Arbitrageurs"])   
+        plt.legend(["Pool", "Traders", "Arbitrageurs"])
+   
+    plt.figure(constrained_layout=True)
+    plt.title("Market price trend")
+    plt.xlabel("Time (block)")
+    plt.ylabel("Market Price of Asset 0")
+    priceDataFile = os.path.join(datadirpath,"price.csv")
+    priceData = pd.read_csv(priceDataFile, sep="\t")
+    priceXasis = [i for i in range(len(priceData))]
+    plt.plot(priceXasis, priceData["real"],
+    priceXasis, priceData["prediction"])
+    plt.legend(["real","prediction"])
     plt.show()
   
 if __name__ == "__main__":
     maindirpath = os.path.join(os.getcwd(), os.pardir)
     datadirpath = os.path.join(maindirpath, "data")
-    simulationScenarios = ["CPMM", "CSMM", "DCPMM", "DCSMM"]
+    priceDataFile = os.path.join(datadirpath,"price.csv")
+    try:
+        priceData = pd.read_csv(priceDataFile, sep="\t")
+    except:
+        try:
+            maindirpath = os.getcwd()
+            datadirpath = os.path.join(maindirpath, "data")
+            priceDataFile = os.path.join(datadirpath,"price.csv")
+            priceData = pd.read_csv(priceDataFile, sep="\t")
+        except:
+            raise Exception("Fail to load data")
+    try:
+        marketPrice = priceData["real"].tolist()
+        marketPricePrediction = priceData["prediction"].tolist()
+    except:
+        marketPrice = []
+        marketPricePrediction = []
+    simulationScenarios = scenario.generateDefaultScenarios(marketPrice, marketPricePrediction)
     main(datadirpath, simulationScenarios)
     

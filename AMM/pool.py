@@ -55,9 +55,9 @@ class Pool: # abstract
             self.reserves[inputAssetId] += feeAmount
         return outputAmount
     
-    def calculateExpectedArbitrageProfit(self): 
+    def calculateExpectedArbitrageProfit(self, realMarketPrice0): 
         poolPrice0 = self.calculatePrice(0)
-        marketPrice0 = self.getMarketPrice0()
+        marketPrice0 = realMarketPrice0
         if marketPrice0 > poolPrice0: # arbitrageurs buy Asset0 from pool and sell it to market
             inputAssetId = 1
             marketPrice = 1/marketPrice0 # dbz
@@ -73,8 +73,8 @@ class Pool: # abstract
         profitAmount = (arbitrageOutputAmount / marketPrice) - spentAmount
         return [spentAmount, profitAmount, inputAssetId]
     
-    def arbitrageAsMuchAsPossible(self, maximumAmount0, maximumAmount1):
-        [desiredInputAmount, profitAmount, inputAssetId] = self.calculateExpectedArbitrageProfit()
+    def arbitrageAsMuchAsPossible(self, maximumAmount0, maximumAmount1, realMarketPrice0):
+        [desiredInputAmount, profitAmount, inputAssetId] = self.calculateExpectedArbitrageProfit(realMarketPrice0)
         maximumInputAmount = maximumAmount0 if inputAssetId == 0 else maximumAmount1
         if profitAmount > 0.0:
             inputAmount = desiredInputAmount if desiredInputAmount < maximumInputAmount else maximumInputAmount
