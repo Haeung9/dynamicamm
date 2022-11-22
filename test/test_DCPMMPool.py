@@ -1,7 +1,4 @@
-import sys
-import os
 import unittest
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from AMM import pool
 
 class DCPMMPoolTest(unittest.TestCase):
@@ -170,6 +167,3 @@ class DCPMMPoolTest(unittest.TestCase):
         reserve1 = apool.getReserve1()
         self.assertEqual(reserve0, 110)
         self.assertEqual(reserve1, 100-(1000/60))
-
-if __name__ == "__main__":
-    unittest.main()

@@ -1,4 +1,5 @@
 import math
+from typing import List 
 
 class Pool: # abstract
     def __init__(self, reserve0 = 0.0, reserve1 = 0.0, feeRate = 0.003, marketPrice = 1.0, feeInPool = False):
@@ -28,13 +29,13 @@ class Pool: # abstract
     def calculateTotalFeeValue(self, marketprice0):
         return (self.fees[1] + (marketprice0 * self.fees[0]))
     
-    # abstract, must overload at child
+    # abstract, must override at child
     def calculateOutputAmount(self, inputAssetId, effectiveInputAmount: float) -> float :
         pass # must return outputAmount
-    # abstract, must overload at child
+    # abstract, must override at child
     def calculatePrice(self, assetId) -> float :
         pass # must return price
-    # abstract, must overload at child
+    # abstract, must override at child
     def calculateReserveForTargetPrice0(self, targetPrice0, assetId) -> float :
         pass # must return required reserve of assetId, in order to poolPrice reaches to targetPrice0
 
@@ -55,39 +56,72 @@ class Pool: # abstract
             self.reserves[inputAssetId] += feeAmount
         return outputAmount
     
-    def calculateExpectedArbitrageProfit(self, realMarketPrice0): 
-        poolPrice0 = self.calculatePrice(0)
-        marketPrice0 = realMarketPrice0
-        if marketPrice0 > poolPrice0: # arbitrageurs buy Asset0 from pool and sell it to market
-            inputAssetId = 1
-            marketPrice = 1/marketPrice0 # dbz
-        elif marketPrice0 < poolPrice0: # arbitrageurs buy Asset1 from pool and sell it to market
-            inputAssetId = 0
-            marketPrice = marketPrice0
-        else:
-            return [0.0, 0.0, 0] 
-        currentInputReserve = self.getReserve(inputAssetId)
-        targetInputReserve = self.calculateReserveForTargetPrice0(marketPrice0, inputAssetId)
-        spentAmount = targetInputReserve - currentInputReserve
-        arbitrageOutputAmount = self.calculateOutputAmount(inputAssetId, spentAmount)
-        profitAmount = (arbitrageOutputAmount / marketPrice) - spentAmount
-        return [spentAmount, profitAmount, inputAssetId]
-    
+    # def calculateExpectedArbitrageProfit(self, realMarketPrice0): 
+    #     poolPrice0 = self.calculatePrice(0)
+    #     marketPrice0 = realMarketPrice0
+    #     if marketPrice0 > poolPrice0: # arbitrageurs buy Asset0 from pool and sell it to market
+    #         inputAssetId = 1
+    #         marketPrice = 1/marketPrice0 # dbz
+    #     elif marketPrice0 < poolPrice0: # arbitrageurs buy Asset1 from pool and sell it to market
+    #         inputAssetId = 0
+    #         marketPrice = marketPrice0
+    #     else:
+    #         return [0.0, 0.0, 0] 
+    #     currentInputReserve = self.getReserve(inputAssetId)
+    #     targetInputReserve = self.calculateReserveForTargetPrice0(marketPrice0, inputAssetId)
+    #     spentAmount = targetInputReserve - currentInputReserve
+    #     arbitrageOutputAmount = self.calculateOutputAmount(inputAssetId, spentAmount)
+    #     profitAmount = (arbitrageOutputAmount / marketPrice) - spentAmount
+    #     return [spentAmount, profitAmount, inputAssetId]
+
+    # abstract, must override
+    def calculateOptimalArbitrageAmount(self, realMarketPrice0, inputAssetId) -> float :
+        pass # must return inputAmount
+
     def arbitrageAsMuchAsPossible(self, maximumAmount0, maximumAmount1, realMarketPrice0):
-        [desiredInputAmount, profitAmount, inputAssetId] = self.calculateExpectedArbitrageProfit(realMarketPrice0)
-        maximumInputAmount = maximumAmount0 if inputAssetId == 0 else maximumAmount1
-        if profitAmount > 0.0:
-            inputAmount = desiredInputAmount if desiredInputAmount < maximumInputAmount else maximumInputAmount
-            try:
-                outputAmount = self.swap(inputAssetId, inputAmount)
-            except Exception:
-                inputAmount = 0.0
-                outputAmount = 0.0
+        poolPrice0 = self.calculatePrice(0)
+        priceRatio = realMarketPrice0/poolPrice0
+        feeRate = self.feeRate
+        if priceRatio < 0.0:
+            raise Exception("Invalid price values")
+        elif priceRatio < (1.0 - feeRate):
+            isArbitrageProfitable = True
+            inputAssetId = 0 # Since pool price of asset 0 is more expensive than market, arbitrageurs sell asset 0 in the pool. 
+        elif priceRatio > (1.0 / (1.0 - feeRate)):
+            isArbitrageProfitable = True
+            inputAssetId = 1 # Since pool price of asset 0 is cheaper than market, arbitrageurs buy asset 0 in the pool.
         else:
+            isArbitrageProfitable = False
             inputAssetId = 0
-            inputAmount = 0.0
+            arbitrageAmount = 0.0
             outputAmount = 0.0
-        return [inputAssetId, inputAmount, outputAmount]
+        
+        if isArbitrageProfitable:
+            optimalArbitrageAmount = self.calculateOptimalArbitrageAmount(realMarketPrice0, inputAssetId)
+            maximumInputAmount = maximumAmount0 if inputAssetId == 0 else maximumAmount1
+            arbitrageAmount = optimalArbitrageAmount if maximumInputAmount > optimalArbitrageAmount else maximumInputAmount
+            try:
+                outputAmount = self.swap(inputAssetId, arbitrageAmount)
+            except Exception:
+                arbitrageAmount = 0.0
+                outputAmount = 0.0
+        return [inputAssetId, arbitrageAmount, outputAmount]
+
+    # def arbitrageAsMuchAsPossible(self, maximumAmount0, maximumAmount1, realMarketPrice0):
+    #     [desiredInputAmount, profitAmount, inputAssetId] = self.calculateExpectedArbitrageProfit(realMarketPrice0)
+    #     maximumInputAmount = maximumAmount0 if inputAssetId == 0 else maximumAmount1
+    #     if profitAmount > 0.0:
+    #         inputAmount = desiredInputAmount if desiredInputAmount < maximumInputAmount else maximumInputAmount
+    #         try:
+    #             outputAmount = self.swap(inputAssetId, inputAmount)
+    #         except Exception:
+    #             inputAmount = 0.0
+    #             outputAmount = 0.0
+    #     else:
+    #         inputAssetId = 0
+    #         inputAmount = 0.0
+    #         outputAmount = 0.0
+    #     return [inputAssetId, inputAmount, outputAmount]
     
 
 """ CPMM
@@ -108,12 +142,12 @@ class CPMMPool(Pool):
     def calculateParameterK(self):
         return self.reserves[0]*self.reserves[1]
 
-    def calculatePrice(self, assetId): # overload super
+    def calculatePrice(self, assetId): # override super
         if ((assetId != 0) & (assetId != 1)):
             raise Exception("Wrong asset id")
         return self.reserves[(assetId+1)%2]/self.reserves[assetId]
 
-    def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
+    def calculateOutputAmount(self, inputAssetId, inputAmount): # override super
         if ((inputAssetId != 0) & (inputAssetId != 1)):
             raise Exception("Wrong asset id")
         if inputAmount < 0:
@@ -123,16 +157,26 @@ class CPMMPool(Pool):
         # outputAmount = (outputReserve*inputAmount)/(inputReserve + inputAmount)
         return outputAmount
     
-    def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # overload super
-        if assetId == 0:
-            targetPrice = targetPrice0
-        elif assetId == 1:
-            targetPrice = 1/targetPrice0
-        else:
-            raise Exception("Wrong asset id")
+    def calculateOptimalArbitrageAmount(self, realMarketPrice0, inputAssetId) -> float :
+        feeRate = self.feeRate
+        outputPoolPrice = self.calculatePrice((inputAssetId+1)%2)
+        outputMarketPrice = realMarketPrice0 if inputAssetId == 1 else (1/realMarketPrice0)
+        inputReserve = self.getReserve(inputAssetId)
         parameterK = self.calculateParameterK()
-        targetReserve = math.sqrt(parameterK / targetPrice) # x^2 = K / p, or y^2 = K * p
-        return targetReserve
+        effectivePriceDifference = ((1.0 - feeRate) * outputMarketPrice) - outputPoolPrice
+        optimalInputAmount = (math.sqrt(inputReserve**2 + (effectivePriceDifference*parameterK)) - inputReserve) / (1.0 - feeRate)
+        return optimalInputAmount
+    
+    # def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # override super
+    #     if assetId == 0:
+    #         targetPrice = targetPrice0
+    #     elif assetId == 1:
+    #         targetPrice = 1/targetPrice0
+    #     else:
+    #         raise Exception("Wrong asset id")
+    #     parameterK = self.calculateParameterK()
+    #     targetReserve = math.sqrt(parameterK / targetPrice) # x^2 = K / p, or y^2 = K * p
+    #     return targetReserve
 
 """ DCPMM
     Let x == asset0, y == asset1
@@ -157,7 +201,7 @@ class DCPMMPool(Pool):
         parameterA = reserve0 - (reserve1/price0) # TODO: except dbz
         return parameterA
 
-    def calculatePrice(self, assetId): # overload super
+    def calculatePrice(self, assetId): # override
         if assetId == 0:
             price = self.getMarketPrice0()
         elif assetId == 1:
@@ -167,7 +211,7 @@ class DCPMMPool(Pool):
             raise Exception("Wrong asset id")
         return price
     
-    def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
+    def calculateOutputAmount(self, inputAssetId, inputAmount): # override
         if inputAmount < 0:
             print(inputAmount)
             raise Exception("Wrong input amount") 
@@ -182,18 +226,31 @@ class DCPMMPool(Pool):
         else:
             raise Exception("Wrong asset id")
         return outputAmount
-
-    def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # overload super
+    
+    def calculateOptimalArbitrageAmount(self, realMarketPrice0, inputAssetId) -> float : # override
+        feeRate = self.feeRate
+        outputPoolPrice = self.calculatePrice((inputAssetId+1)%2)
+        outputMarketPrice = realMarketPrice0 if inputAssetId == 1 else (1/realMarketPrice0)
         parameterA = self.calculateParameterA()
-        if assetId == 0:
-            reserve1 = self.getReserve1()
-            targetReserve = parameterA + (reserve1 / targetPrice0) # x = a + (y/p)
-        elif assetId == 1:
-            reserve0 = self.getReserve0()
-            targetReserve = targetPrice0 * (reserve0 - parameterA) # y = p * (x-a)
-        else:
-            raise Exception("Wrong asset id")
-        return targetReserve
+        reserve0 = self.getReserve0()
+        reserve1 = self.getReserve1()
+        rectifiedInputReserve = reserve1 if inputAssetId == 1 else (reserve0 - parameterA)
+        rectifiedParameterK = (reserve0 - parameterA) * reserve1
+        effectivePriceDifference = ((1.0 - feeRate) * outputMarketPrice) - outputPoolPrice
+        optimalInputAmount = (math.sqrt(rectifiedInputReserve**2 + (effectivePriceDifference*rectifiedParameterK)) - rectifiedInputReserve) / (1.0 - feeRate)
+        return optimalInputAmount
+
+    # def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # override super
+    #     parameterA = self.calculateParameterA()
+    #     if assetId == 0:
+    #         reserve1 = self.getReserve1()
+    #         targetReserve = parameterA + (reserve1 / targetPrice0) # x = a + (y/p)
+    #     elif assetId == 1:
+    #         reserve0 = self.getReserve0()
+    #         targetReserve = targetPrice0 * (reserve0 - parameterA) # y = p * (x-a)
+    #     else:
+    #         raise Exception("Wrong asset id")
+    #     return targetReserve
 
 """ DCSMM
     Let x == asset0, y == asset1
@@ -214,7 +271,7 @@ class DCSMMPool(Pool):
         price0 = self.calculatePrice(0)
         return ( (price0*reserve0) + reserve1 )
 
-    def calculatePrice(self, assetId): # overload super
+    def calculatePrice(self, assetId): # override
         if assetId == 0:
             price = self.getMarketPrice0()
         elif assetId == 1:
@@ -224,7 +281,7 @@ class DCSMMPool(Pool):
             raise Exception("Wrong asset id")
         return price
 
-    def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
+    def calculateOutputAmount(self, inputAssetId, inputAmount): # override
         if inputAmount < 0:
             print(inputAmount)
             raise Exception("Wrong input amount") 
@@ -236,19 +293,26 @@ class DCSMMPool(Pool):
         else:
             raise Exception("Wrong asset id")
         return outputAmount
-    
-    def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # overload super
-        if ((assetId != 0) & (assetId != 1)):
-            raise Exception("Wrong asset id")
-        price0 = self.calculatePrice(0)
-        parameterK = self.calculateParameterK()
-        if price0 == targetPrice0:
-            targetReserve = self.getReserve(assetId)
-        elif price0 < targetPrice0: # if x is cheap
-            targetReserve = parameterK if assetId == 1 else 0.0 # buy all x; thus x -> 0 and y -> K
-        else: # price0 > targetPrice0, y is cheap
-            targetReserve = parameterK/price0 if assetId == 0 else 0.0 # buy all y; thus x -> K/p and y -> 0
-        return targetReserve
+
+    def calculateOptimalArbitrageAmount(self, realMarketPrice0, inputAssetId) -> float : # unused input arg. realMaketPrice0
+        outputReserve = self.getReserve((inputAssetId+1)%2)
+        priceOutput = self.calculatePrice((inputAssetId+1)%2)
+        feeRate = self.feeRate
+        optimalArbitrageAmount = outputReserve * priceOutput / (1.0 - feeRate)
+        return optimalArbitrageAmount
+
+    # def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # override super
+    #     if ((assetId != 0) & (assetId != 1)):
+    #         raise Exception("Wrong asset id")
+    #     price0 = self.calculatePrice(0)
+    #     parameterK = self.calculateParameterK()
+    #     if price0 == targetPrice0:
+    #         targetReserve = self.getReserve(assetId)
+    #     elif price0 < targetPrice0: # if x is cheap
+    #         targetReserve = parameterK if assetId == 1 else 0.0 # buy all x; thus x -> 0 and y -> K
+    #     else: # price0 > targetPrice0, y is cheap
+    #         targetReserve = parameterK/price0 if assetId == 0 else 0.0 # buy all y; thus x -> K/p and y -> 0
+    #     return targetReserve
 
 """ WCSMM (exactly same with DCSMM, except price0 = initialPrice0.)
     Equivalent to CSMM, if initialPrice0 = 1.
@@ -276,7 +340,7 @@ class WCSMMPool(Pool): # CSMM pool with weight. The price ratio can differ from 
         price0 = self.calculatePrice(0)
         return ( (price0*reserve0) + reserve1 )
 
-    def calculatePrice(self, assetId): # overload super
+    def calculatePrice(self, assetId): # override super
         if assetId == 0:
             return self.__initialPrice0 
         elif assetId == 1:
@@ -284,7 +348,7 @@ class WCSMMPool(Pool): # CSMM pool with weight. The price ratio can differ from 
         else:
             raise Exception("Wrong asset id")
         
-    def calculateOutputAmount(self, inputAssetId, inputAmount): # overload super
+    def calculateOutputAmount(self, inputAssetId, inputAmount): # override super
         if ((inputAssetId != 0) & (inputAssetId != 1)):
             raise Exception("Wrong asset id")
         if inputAmount < 0:
@@ -293,16 +357,23 @@ class WCSMMPool(Pool): # CSMM pool with weight. The price ratio can differ from 
         outputAmount = inputAmount * price
         return outputAmount
     
-    def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # overload super
-        if ((assetId != 0) & (assetId != 1)):
-            raise Exception("Wrong asset id")
-        price0 = self.calculatePrice(0)
-        parameterK = self.calculateParameterK()
-        if price0 == targetPrice0:
-            targetReserve = self.getReserve(assetId)
-        elif price0 < targetPrice0: # if x is cheap
-            targetReserve = parameterK if assetId == 1 else 0.0 # buy all x; x -> 0 and y -> K
-        else: # price0 > targetPrice0, y is cheap
-            targetReserve = parameterK/price0 if assetId == 0 else 0.0 # buy all y; x -> K/p and y -> 0
-        return targetReserve
+    def calculateOptimalArbitrageAmount(self, realMarketPrice0, inputAssetId) -> float : # unused input arg. realMaketPrice0
+        outputReserve = self.getReserve((inputAssetId+1)%2)
+        priceOutput = self.calculatePrice((inputAssetId+1)%2)
+        feeRate = self.feeRate
+        optimalArbitrageAmount = outputReserve * priceOutput / (1.0 - feeRate)
+        return optimalArbitrageAmount
+    
+    # def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # override super
+    #     if ((assetId != 0) & (assetId != 1)):
+    #         raise Exception("Wrong asset id")
+    #     price0 = self.calculatePrice(0)
+    #     parameterK = self.calculateParameterK()
+    #     if price0 == targetPrice0:
+    #         targetReserve = self.getReserve(assetId)
+    #     elif price0 < targetPrice0: # if x is cheap
+    #         targetReserve = parameterK if assetId == 1 else 0.0 # buy all x; x -> 0 and y -> K
+    #     else: # price0 > targetPrice0, y is cheap
+    #         targetReserve = parameterK/price0 if assetId == 0 else 0.0 # buy all y; x -> K/p and y -> 0
+    #     return targetReserve
 

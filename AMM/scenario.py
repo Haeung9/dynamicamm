@@ -1,5 +1,5 @@
 class Scenario:
-    def __init__(self, curve = "CPMM", priceType = "real", price = [], pricePrediction = [], feeInPool = False):
+    def __init__(self, curve = "CPMM", priceType = "real", price = [], pricePrediction = [], feeInPool = True):
         self.curve = curve
         self.priceType = priceType
         self.price = price

@@ -16,9 +16,6 @@ def runSimulation(Pool: pool.Pool, Traders: agent.Agent, Arbitrageurs: agent.Age
     marketPricePrediction = simulationScenario.pricePrediction if simulationScenario.priceType == "prediction" else simulationScenario.price
     for i in range(len(marketPriceTrend)):
         Pool.setMarketPrice0(marketPricePrediction[i])
-        snapshotTraders.append(copy.deepcopy(Traders))
-        snapshotArbitrageurs.append(copy.deepcopy(Arbitrageurs))
-        snapshotPool.append(copy.deepcopy(Pool))
 
         tradeAssetId = rng.integers(0,2) # 0 or 1
         tradeValue = rng.random() * 10 # 0 to <10 
@@ -33,6 +30,9 @@ def runSimulation(Pool: pool.Pool, Traders: agent.Agent, Arbitrageurs: agent.Age
 
         [inputArbAssetId, inputArbAmount, outputArbAmount] = Pool.arbitrageAsMuchAsPossible(Arbitrageurs.balances[0], Arbitrageurs.balances[1], marketPriceTrend[i])
         Arbitrageurs.trade((inputArbAssetId+1)%2, outputArbAmount, inputArbAmount)
+        snapshotTraders.append(copy.deepcopy(Traders))
+        snapshotArbitrageurs.append(copy.deepcopy(Arbitrageurs))
+        snapshotPool.append(copy.deepcopy(Pool))
     return [snapshotPool, snapshotTraders, snapshotArbitrageurs]
 
 def main(simulationScenarios: List[scenario.Scenario], rootpath = os.getcwd(), randomSeed = round(time.time())):

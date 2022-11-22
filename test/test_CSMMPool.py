@@ -1,7 +1,4 @@
-import sys
-import os
 import unittest
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from AMM import pool
 
 class CSMMPoolTest(unittest.TestCase):
@@ -154,8 +151,3 @@ class CSMMPoolTest(unittest.TestCase):
         self.assertEqual(fee0, 0.0)
         self.assertEqual(fee1, 0.0)
         
-
-
-
-if __name__ == "__main__":
-    unittest.main()

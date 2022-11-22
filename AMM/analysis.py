@@ -9,7 +9,7 @@ def loadData(nameSeparators: List[str], datadirpath):
     for i in range(len(nameSeparators)):
         resultdirpath = os.path.join(datadirpath, nameSeparators[i])
         fileName = os.path.join(resultdirpath, "result.csv")
-        result.append(pd.read_csv(fileName, sep="\t"))
+        result.append(pd.read_csv(fileName, sep=","))
     return result
 
 def main(datadirpath, simulationScenarios: List[scenario.Scenario]):
@@ -62,7 +62,7 @@ def main(datadirpath, simulationScenarios: List[scenario.Scenario]):
     plt.xlabel("Time (block)")
     plt.ylabel("Market Price of Asset 0")
     priceDataFile = os.path.join(datadirpath,"price.csv")
-    priceData = pd.read_csv(priceDataFile, sep="\t")
+    priceData = pd.read_csv(priceDataFile, sep=",")
     priceXasis = [i for i in range(len(priceData))]
     plt.plot(priceXasis, priceData["real"],
     priceXasis, priceData["prediction"])
@@ -74,13 +74,13 @@ if __name__ == "__main__":
     datadirpath = os.path.join(maindirpath, "data")
     priceDataFile = os.path.join(datadirpath,"price.csv")
     try:
-        priceData = pd.read_csv(priceDataFile, sep="\t")
+        priceData = pd.read_csv(priceDataFile, sep=",")
     except:
         try:
             maindirpath = os.getcwd()
             datadirpath = os.path.join(maindirpath, "data")
             priceDataFile = os.path.join(datadirpath,"price.csv")
-            priceData = pd.read_csv(priceDataFile, sep="\t")
+            priceData = pd.read_csv(priceDataFile, sep=",")
         except:
             raise Exception("Fail to load data")
     try:

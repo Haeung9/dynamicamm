@@ -13,13 +13,14 @@ def directoryMaker(subdirName, rootpath = os.getcwd()):
         print("Error: Failed to create the directory.")
     return simdirpath
 
-def resultFileWriter(snapshotPool, snapshotTraders, snapshotArbitrageurs, simulationScenario: scenario.Scenario, dirpath, separator = "\t"):
+def resultFileWriter(snapshotPool, snapshotTraders, snapshotArbitrageurs, simulationScenario: scenario.Scenario, dirpath, separator = ","):
     marketPriceTrend = simulationScenario.price
+    marketPricePrediction = simulationScenario.pricePrediction
     numberOfTimePoints = len(marketPriceTrend)
     labels = ["PoolValue", "PoolReserve0", "PoolReserve1",
     "TradersValue", "TradersReserve0", "TradersReserve1",
     "ArbitrageursValue", "ArbitrageursReserve0", "ArbitrageursReserve1",
-    "FeeValue", "FeeReserve0", "FeeReserve1"]
+    "FeeValue", "FeeReserve0", "FeeReserve1", "marketPriceTrend", "marketPricePrediction"]
     result = pd.DataFrame(columns = labels, index=[i for i in range(numberOfTimePoints)])
     for i in range(numberOfTimePoints):
         result.iloc[i, 0] = snapshotPool[i].calculateTotalValue(marketPriceTrend[-1])
@@ -34,6 +35,8 @@ def resultFileWriter(snapshotPool, snapshotTraders, snapshotArbitrageurs, simula
         result.iloc[i, 9] = snapshotPool[i].calculateTotalFeeValue(marketPriceTrend[-1])
         result.iloc[i, 10] = snapshotPool[i].getFeeReserve0()
         result.iloc[i, 11] = snapshotPool[i].getFeeReserve1()
+        result.iloc[i, 12] = marketPriceTrend[i]
+        result.iloc[i, 13] = marketPricePrediction[i]
     fileName = os.path.join(dirpath, "result.csv")
     result.to_csv(fileName, sep=separator)
 
