@@ -26,7 +26,8 @@ def main(datadirpath, simulationScenarios: List[scenario.Scenario]):
     
     for i in range(len(nameSeparators)):
         impermenentLoss = result[i].at[0,"PoolValue"] - result[i].at[result[i].index[-1],"PoolValue"]
-        print(nameSeparators[i]+", IL: "+str(impermenentLoss))
+        impermenentLossPercentage = 100 *(1 - (result[i].at[result[i].index[-1],"PoolValue"]/result[i].at[0,"PoolValue"]))
+        print(nameSeparators[i]+", IL: "+str(impermenentLoss) + " (" + str(impermenentLossPercentage) + " %)")
 
         plt.figure(constrained_layout=True)
         titleString = nameSeparators[i]

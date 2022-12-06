@@ -36,8 +36,8 @@ class Pool: # abstract
     def calculatePrice(self, assetId) -> float :
         pass # must return price
     # abstract, must override at child
-    def calculateReserveForTargetPrice0(self, targetPrice0, assetId) -> float :
-        pass # must return required reserve of assetId, in order to poolPrice reaches to targetPrice0
+    # def calculateReserveForTargetPrice0(self, targetPrice0, assetId) -> float :
+    #     pass # must return required reserve of assetId, in order to poolPrice reaches to targetPrice0
 
     def swap(self, inputAssetId, inputAmount): # Always use try-except for swap method. 
         if ((inputAssetId != 0) & (inputAssetId != 1)):
