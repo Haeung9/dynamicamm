@@ -21,8 +21,8 @@ def resultFileWriter(snapshotPool, snapshotTraders, snapshotArbitrageurs, simula
     "TradersValue", "TradersReserve0", "TradersReserve1",
     "ArbitrageursValue", "ArbitrageursReserve0", "ArbitrageursReserve1",
     "FeeValue", "FeeReserve0", "FeeReserve1", "marketPriceTrend", "marketPricePrediction"]
-    result = pd.DataFrame(columns = labels, index=[i for i in range(numberOfTimePoints)])
-    for i in range(numberOfTimePoints):
+    result = pd.DataFrame(columns = labels, index=[i for i in range(numberOfTimePoints + 1)])
+    for i in range(numberOfTimePoints + 1):
         result.iloc[i, 0] = snapshotPool[i].calculateTotalValue(marketPriceTrend[-1])
         result.iloc[i, 1] = snapshotPool[i].getReserve0()
         result.iloc[i, 2] = snapshotPool[i].getReserve1()
@@ -35,8 +35,6 @@ def resultFileWriter(snapshotPool, snapshotTraders, snapshotArbitrageurs, simula
         result.iloc[i, 9] = snapshotPool[i].calculateTotalFeeValue(marketPriceTrend[-1])
         result.iloc[i, 10] = snapshotPool[i].getFeeReserve0()
         result.iloc[i, 11] = snapshotPool[i].getFeeReserve1()
-        result.iloc[i, 12] = marketPriceTrend[i]
-        result.iloc[i, 13] = marketPricePrediction[i]
     fileName = os.path.join(dirpath, "result.csv")
     result.to_csv(fileName, sep=separator)
 
@@ -44,5 +42,17 @@ def generatePricePredictionWithError(price: list, rng: numpy.random, maximumRela
     numberOfTimePoints = len(price)
     marketPricePredictionError = rng.random(numberOfTimePoints).tolist()
     marketPricePrediction = [price[i] * (1.0 + (maximumRelativeError * 2 * (marketPricePredictionError[i] - 0.5))) for i in range(numberOfTimePoints)]
+    return marketPricePrediction
+def generatePricePredictionWithGaussianError(price: list, rng: numpy.random, sigma = 5.0):
+    numberOfTimePoints = len(price)
+    # marketPricePredictionError = rng.random(numberOfTimePoints).tolist()
+    # marketPricePrediction = [price[i] * (1.0 + (maximumRelativeError * 2 * (marketPricePredictionError[i] - 0.5))) for i in range(numberOfTimePoints)]
+    marketPricePredictionError = rng.normal(loc = 0.0, scale= sigma, size=numberOfTimePoints).tolist()
+    marketPricePrediction = [price[i] + marketPricePredictionError[i] for i in range(numberOfTimePoints)]
+    return marketPricePrediction
+def generatePricePredictionWithMAPE(price: list, rng: numpy.random, mape = 0.05):
+    numberOfTimePoints = len(price)
+    normalNoise = rng.normal(loc = 0.0, scale= 1.0, size=numberOfTimePoints).tolist()
+    marketPricePrediction = [price[i] * ( 1.0 + (mape * normalNoise[i])) for i in range(numberOfTimePoints)]
     return marketPricePrediction
 

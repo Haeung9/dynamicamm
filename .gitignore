@@ -9,3 +9,5 @@ Include/
 Lib/
 share/
 pyvenv.cfg
+
+jupyter/

@@ -8,12 +8,11 @@ class Agent:
     def calculateTotalValue(self, marketPrice0):
         return (self.balances[1] + (marketPrice0 * self.balances[0]))
     def spendAsset(self, assetId, amount):
-        if self.balances[assetId] >= amount:
-            self.balances[assetId] -= amount
-        return
+        if not self.balances[assetId] >= amount:
+            raise(Exception, 'insufficient balance')
+        self.balances[assetId] -= amount   
     def earnAsset(self, assetId, amount):
         self.balances[assetId] += amount
     def trade(self, earnedAssetId, earnedAmount, spentAmount):
-        if self.balances[(earnedAssetId+1)%2] >= spentAmount:
-            self.spendAsset((earnedAssetId+1)%2, spentAmount)
-            self.earnAsset(earnedAssetId, earnedAmount)
+        self.spendAsset((earnedAssetId+1)%2, spentAmount)
+        self.earnAsset(earnedAssetId, earnedAmount)

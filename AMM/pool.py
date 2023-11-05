@@ -78,7 +78,7 @@ class Pool: # abstract
     def calculateOptimalArbitrageAmount(self, realMarketPrice0, inputAssetId) -> float :
         pass # must return inputAmount
 
-    def arbitrageAsMuchAsPossible(self, maximumAmount0, maximumAmount1, realMarketPrice0):
+    def arbitrageAsMuchAsPossible(self, maximumAmount0, maximumAmount1, realMarketPrice0, riskFactor = 0.0):
         poolPrice0 = self.calculatePrice(0)
         priceRatio = realMarketPrice0/poolPrice0
         feeRate = self.feeRate
@@ -100,6 +100,7 @@ class Pool: # abstract
             optimalArbitrageAmount = self.calculateOptimalArbitrageAmount(realMarketPrice0, inputAssetId)
             maximumInputAmount = maximumAmount0 if inputAssetId == 0 else maximumAmount1
             arbitrageAmount = optimalArbitrageAmount if maximumInputAmount > optimalArbitrageAmount else maximumInputAmount
+            arbitrageAmount = arbitrageAmount * (1.0 - riskFactor)
             try:
                 outputAmount = self.swap(inputAssetId, arbitrageAmount)
             except Exception:
@@ -234,10 +235,16 @@ class DCPMMPool(Pool):
         parameterA = self.calculateParameterA()
         reserve0 = self.getReserve0()
         reserve1 = self.getReserve1()
-        rectifiedInputReserve = reserve1 if inputAssetId == 1 else (reserve0 - parameterA)
-        rectifiedParameterK = (reserve0 - parameterA) * reserve1
         effectivePriceDifference = ((1.0 - feeRate) * outputMarketPrice) - outputPoolPrice
-        optimalInputAmount = (math.sqrt(rectifiedInputReserve**2 + (effectivePriceDifference*rectifiedParameterK)) - rectifiedInputReserve) / (1.0 - feeRate)
+        # 
+        # rectifiedInputReserve = reserve1 if inputAssetId == 1 else (reserve0 - parameterA)
+        # rectifiedParameterK = (reserve0 - parameterA) * reserve1
+        # optimalInputAmount = (math.sqrt(rectifiedInputReserve**2 + (effectivePriceDifference*rectifiedParameterK)) - rectifiedInputReserve) / (1.0 - feeRate)
+
+        # alt cal
+        rectifiedInputReserve = reserve1 if inputAssetId == 1 else reserve1*outputPoolPrice
+        optimalInputAmount = rectifiedInputReserve * (math.sqrt(1.0 + (effectivePriceDifference/outputPoolPrice)) - 1.0) / (1.0 - feeRate)
+
         return optimalInputAmount
 
     # def calculateReserveForTargetPrice0(self, targetPrice0, assetId): # override super
